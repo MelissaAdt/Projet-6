@@ -1,4 +1,7 @@
 const multer = require('multer');
+const sharp = require('sharp');
+const fs = require('fs');
+const path = require('path');
 
 const MIME_TYPES = {
     'image/jpg': 'jpg',
@@ -17,4 +20,39 @@ const storage = multer.diskStorage({
       }
 });
 
-module.exports = multer({ storage }).single('image');
+// Middleware pour optimiser l'image téléchargée et redimensionner si nécessaire.
+const optimizeImage = async (req, res, next) => {
+    if (!req.file) return next(); 
+  
+    const originalImagePath = req.file.path; 
+    const ext = path.extname(originalImagePath).toLowerCase(); 
+    const optimizedImageName = `optimized_${path.basename(originalImagePath, ext)}${ext}`; 
+    const optimizedImagePath = path.join('images', optimizedImageName); 
+  
+    try {
+     
+      await sharp(originalImagePath)
+        .resize({ width: 400, withoutEnlargement: true }) 
+        .toFile(optimizedImagePath); 
+  
+      req.file.path = optimizedImagePath; 
+      req.file.filename = optimizedImageName; 
+  
+      fs.unlink(originalImagePath, (error) => {
+        if (error) {
+          console.error("Impossible de supprimer l'image originale :", error);
+          return next(error);
+        }
+        next(); 
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+ 
+  const upload = multer({ storage }).single('image');
+  
+  module.exports = {
+    upload,
+    optimizeImage,
+  };

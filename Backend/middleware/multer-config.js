@@ -6,7 +6,8 @@ const path = require('path');
 const MIME_TYPES = {
     'image/jpg': 'jpg',
     'image/jpeg': 'jpg',
-    'image/png': 'png'
+    'image/png': 'png',
+    'image/webp': 'webp'
 }
 
 const storage = multer.diskStorage({ 
@@ -26,30 +27,42 @@ const optimizeImage = async (req, res, next) => {
   
     const originalImagePath = req.file.path; 
     const ext = path.extname(originalImagePath).toLowerCase(); 
-    const optimizedImageName = `optimized_${path.basename(originalImagePath, ext)}${ext}`; 
-    const optimizedImagePath = path.join('images', optimizedImageName); 
+    const isWebP = ext === '.webp'; 
+    let optimizedImageName, optimizedImagePath;
   
-    try {
+    if (isWebP) {
      
-      await sharp(originalImagePath)
-        .resize({ width: 400, withoutEnlargement: true }) 
-        .toFile(optimizedImagePath); 
+      optimizedImageName = path.basename(originalImagePath);
+      optimizedImagePath = originalImagePath;
+    } else {
+      
+      optimizedImageName = `optimized_${path.basename(originalImagePath, ext)}.webp`; 
+      optimizedImagePath = path.join('images', optimizedImageName); 
   
-      req.file.path = optimizedImagePath; 
-      req.file.filename = optimizedImageName; 
+      try {
+        await sharp(originalImagePath)
+          .resize({ width: 400, withoutEnlargement: true }) 
+          .webp({ quality: 80 }) 
+          .toFile(optimizedImagePath); 
+      } catch (error) {
+        return next(error);
+      }
   
+ 
       fs.unlink(originalImagePath, (error) => {
         if (error) {
           console.error("Impossible de supprimer l'image originale :", error);
           return next(error);
         }
-        next(); 
       });
-    } catch (error) {
-      next(error);
     }
+  
+    req.file.path = optimizedImagePath; 
+    req.file.filename = optimizedImageName; 
+  
+    next(); 
   };
- 
+  
   const upload = multer({ storage }).single('image');
   
   module.exports = {

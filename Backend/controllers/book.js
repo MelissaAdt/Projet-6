@@ -1,5 +1,5 @@
 const Book = require('../models/Book')
-const fs = require("fs");
+const fs = require('fs');
 
 exports.createBook = (req, res, next) => { 
     const bookObject = JSON.parse(req.body.book);
@@ -8,8 +8,7 @@ exports.createBook = (req, res, next) => {
     const book = new Book({
       ...bookObject,
       userId: req.auth.userId,
-      imageUrl: `${req.protocol}://${req.get("host")}/images/${req.file.filename
-      }`,
+      imageUrl: `${req.protocol}://${req.get("host")}/images/${req.file.filename}`,
     });
 
     book.save()
@@ -78,3 +77,45 @@ exports.createBook = (req, res, next) => {
           .then(books => res.status(200).json(books))
           .catch(error => res.status(400).json({ error }));
       };
+
+      exports.rateBook = (req, res, next) => {
+        const userId = req.body.userId;
+        const grade = req.body.rating;
+    
+        if (grade < 0 || grade > 5) {
+            return res.status(400).json({ message: "La note doit être comprise entre 0 et 5." });
+        }
+    
+        Book.findOne({ _id: req.params.id })
+            .then(book => {
+                if (!book) {
+                    return res.status(404).json({ message: "Le livre spécifié est introuvable!" });
+                }
+    
+                if (book.userId === req.auth.userId) {
+                    return res.status(403).json({ message: "Non-authorisé." });
+                }
+    
+                const alreadyRated = book.ratings.some(rating => rating.userId === userId);
+                if (alreadyRated) {
+                    return res.status(409).json({ message: "Vous avez déjà noté ce livre." });
+                }
+    
+                book.ratings.push({ userId, grade });
+    
+                const totalRatings = book.ratings.reduce((acc, rating) => acc + rating.grade, 0);
+                book.averageRating = parseFloat((totalRatings / book.ratings.length).toFixed(1));
+    
+                book.save()
+                    .then(updatedBook => res.status(200).json(updatedBook))
+                    .catch(error => res.status(400).json({ error }));
+            })
+            .catch(error => res.status(500).json({ error }));
+    };
+
+    exports.getBestRatedBooks = (req, res, next) => {
+      Book.find().sort({ averageRating: -1 }).limit(3)
+          .then(books => res.status(200).json(books))
+          .catch(error => res.status(500).json({ error }));
+  };
+    

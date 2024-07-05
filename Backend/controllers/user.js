@@ -2,8 +2,13 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 exports.signup = (req, res, next) => {
+    const email = req.body.email;
+    if (!emailRegex.test(email)) {
+        return res.status(400).json({ message: 'Email invalide' });
+    }
     bcrypt
     .hash(req.body.password, 10)
     .then((hash) => {
@@ -19,7 +24,11 @@ exports.signup = (req, res, next) => {
     .catch((error) => res.status(500).json({ error }));
 };
 
-exports.login =(req, res, next) => { 
+exports.login = (req, res, next) => {
+    const email = req.body.email;
+    if (!emailRegex.test(email)) {
+        return res.status(400).json({ message: 'Email invalide' });
+    }
     User.findOne({email: req.body.email})
     .then(user => {
         if (!user) {

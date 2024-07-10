@@ -37,7 +37,7 @@ exports.createBook = (req, res, next) => {
           { ...bookObject, _id: req.params.id }
         )
           .then(() => res.status(200).json({message : 'Livre modifié !'}))
-          .catch((error) => res.status(401).json({ error }));
+          .catch((error) => res.status(500).json({ error }));
       }
     })
     .catch((error) => {
@@ -57,7 +57,7 @@ exports.createBook = (req, res, next) => {
                 .then(() => {
                   res.status(200).json({ message: 'Livre supprimé' });
                 })
-                .catch((error) => res.status(401).json({ error }));
+                .catch((error) => res.status(500).json({ error }));
             });
           }
         })
@@ -93,12 +93,12 @@ exports.createBook = (req, res, next) => {
                 }
     
                 if (book.userId === req.auth.userId) {
-                    return res.status(403).json({ message: "Non-authorisé." });
+                    return res.status(401).json({ message: "Non-authorisé." });
                 }
     
                 const alreadyRated = book.ratings.some(rating => rating.userId === userId);
                 if (alreadyRated) {
-                    return res.status(409).json({ message: "Vous avez déjà noté ce livre." });
+                    return res.status(401).json({ message: "Vous avez déjà noté ce livre." });
                 }
     
                 book.ratings.push({ userId, grade });

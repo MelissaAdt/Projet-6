@@ -41,7 +41,7 @@ const optimizeImage = async (req, res, next) => {
   
       try {
         await sharp(originalImagePath)
-          .resize({ width: 400, withoutEnlargement: true }) 
+          .resize({ width: 500 }) 
           .webp({ quality: 80 }) 
           .toFile(optimizedImagePath); 
       } catch (error) {
